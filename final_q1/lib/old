@@ -1,0 +1,55 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_todo/home.dart';
+import 'package:flutter/material.dart';
+import 'package:swipe_to/swipe_to.dart';
+
+class Auth extends StatefulWidget {
+  @override
+  _AuthState createState() => _AuthState();
+}
+
+class _AuthState extends State<Auth> {
+  final Stream<QuerySnapshot> _authStream =
+      FirebaseFirestore.instance.collection('Auth').snapshots();
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: _authStream,
+      builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
+        if (snapshot.hasError) {
+          return const Text('Something went wrong');
+        }
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Text("Loading");
+        }
+
+        return Expanded(
+          child: ListView(
+            children: snapshot.data!.docs
+                .map((DocumentSnapshot document) {
+                  Map<String, dynamic> data =
+                      document.data()! as Map<String, dynamic>;
+                  return SwipeTo(
+                    key: UniqueKey(),
+                    iconOnLeftSwipe: Icons.delete,
+                    onLeftSwipe: (details) {
+                      document.reference.delete();
+                    },
+                    iconOnRightSwipe: Icons.edit,
+                    swipeSensitivity: 20,
+                    child: ListTile(
+                      title: Text(data['title']),
+                      subtitle: Text(data['description']),
+                    ),
+                  );
+                })
+                .toList()
+                .cast(),
+          ),
+        );
+      },
+    );
+  }
+}
